@@ -109,6 +109,10 @@ module RSpec::Core
           options[:drb_port] = o.to_i
         end
 
+        parser.on('--[no-]allow-duplicates', 'Allow duplicate files names to run.') do |allow_duplicates|
+          options[:allow_duplicates] = allow_duplicates
+        end
+
         parser.separator("\n  **** Output ****\n\n")
 
         parser.on('-f', '--format FORMATTER', 'Choose a formatter.',

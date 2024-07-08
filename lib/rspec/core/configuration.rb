@@ -269,6 +269,11 @@ module RSpec
       # @return [IO, String]
       define_reader :output_stream
 
+      # @macro add_setting
+      # Allows files to be run multiple times (default: false).
+      # @return [Boolean]
+      add_setting :allow_duplicates
+
       # Set the output stream for reporter.
       # @attr value [IO, String] IO to write to or filename to write to, defaults to $stdout
       def output_stream=(value)
@@ -551,6 +556,7 @@ module RSpec
         @error_exit_code = nil # so it can be overridden by failure exit code
         @fail_if_no_examples = false
         @spec_files_loaded = false
+        @allow_duplicates = false
 
         @backtrace_formatter = BacktraceFormatter.new
 
@@ -1633,7 +1639,9 @@ module RSpec
           loaded_spec_files << f # the registered files are already expended absolute paths
         end
 
-        files_to_run.uniq.each do |f|
+        spec_files = allow_duplicates ? files_to_run : files_to_run.uniq
+
+        spec_files.each do |f|
           file = File.expand_path(f)
           load_file_handling_errors(:load, file)
           loaded_spec_files << file
@@ -2199,7 +2207,9 @@ module RSpec
         files = FlatMap.flat_map(paths_to_check(paths)) do |path|
           path = path.gsub(File::ALT_SEPARATOR, File::SEPARATOR) if File::ALT_SEPARATOR
           File.directory?(path) ? gather_directories(path) : extract_location(path)
-        end.uniq
+        end
+
+        files.uniq! unless allow_duplicates
 
         return files unless only_failures?
         relative_files = files.map { |f| Metadata.relative_path(File.expand_path f) }
@@ -2219,7 +2229,9 @@ module RSpec
       def gather_directories(path)
         include_files = get_matching_files(path, pattern)
         exclude_files = get_matching_files(path, exclude_pattern)
-        (include_files - exclude_files).uniq
+        matching_files = (include_files - exclude_files)
+
+        allow_duplicates ? matching_files : matching_files.uniq
       end
 
       def get_matching_files(path, pattern)
